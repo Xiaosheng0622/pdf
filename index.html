@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PDF转长图工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 24px;
+            margin-top: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #1a73e8;
+            margin-bottom: 8px;
+            font-size: 24px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #5f6368;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        
+        .file-input-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .file-button {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            background-color: #1a73e8;
+            color: white;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        
+        .file-button:hover {
+            background-color: #155ab6;
+        }
+        
+        .file-button:active {
+            background-color: #1250a0;
+        }
+        
+        .settings {
+            margin-bottom: 20px;
+            padding: 16px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .setting-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .setting-label {
+            font-size: 14px;
+            color: #5f6368;
+        }
+        
+        .setting-value {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            font-size: 14px;
+        }
+        
+        .status.error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        
+        .status.info {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+        
+        .preview-container {
+            margin-bottom: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+            display: none;
+            max-height: 500px;
+            position: relative;
+        }
+        
+        .preview-container.show {
+            display: block;
+        }
+        
+        .preview-wrapper {
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .preview-canvas {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .image-info {
+            padding: 12px;
+            background-color: #f8f9fa;
+            font-size: 12px;
+            color: #5f6368;
+            text-align: center;
+        }
+        
+        .download-button {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            background-color: #34a853;
+            color: white;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background-color 0.3s;
+            margin-bottom: 12px;
+        }
+        
+        .download-button:hover {
+            background-color: #2d8a46;
+        }
+        
+        .download-button:active {
+            background-color: #257a3c;
+        }
+        
+        .download-button:disabled {
+            background-color: #dadce0;
+            cursor: not-allowed;
+        }
+        
+        .save-tip {
+            padding: 12px;
+            background-color: #fff3e0;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #e65100;
+            text-align: center;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .save-tip.show {
+            display: block;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #1a73e8;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .progress-bar {
+            height: 4px;
+            background-color: #e0e0e0;
+            border-radius: 2px;
+            margin-top: 12px;
+            overflow: hidden;
+        }
+        
+        .progress {
+            height: 100%;
+            background-color: #1a73e8;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .page-count {
+            font-size: 14px;
+            color: #5f6368;
+            text-align: center;
+            margin-top: 12px;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #9e9e9e;
+        }
+        
+        /* 帮助说明样式 */
+        .help-section {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .help-title {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        
+        .help-step {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding: 12px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .step-number {
+            width: 28px;
+            height: 28px;
+            background-color: #1a73e8;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        
+        .step-content h3 {
+            font-size: 15px;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        
+        .step-content p {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.4;
+        }
+        
+        .step-tip {
+            font-size: 12px !important;
+            color: #999 !important;
+            margin-top: 4px;
+        }
+        
+        .help-faq {
+            margin-top: 20px;
+            padding: 16px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .faq-title {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 12px;
+        }
+        
+        .faq-item {
+            margin-bottom: 12px;
+        }
+        
+        .faq-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .faq-q {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1a73e8;
+            margin-bottom: 4px;
+        }
+        
+        .faq-a {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.4;
+        }
+        
+        .help-shortcut {
+            margin-top: 16px;
+            padding: 16px;
+            background-color: #e8f5e9;
+            border-radius: 8px;
+        }
+        
+        .help-shortcut h3 {
+            font-size: 16px;
+            color: #2e7d32;
+            margin-bottom: 8px;
+        }
+        
+        .help-shortcut ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .help-shortcut li {
+            font-size: 13px;
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 4px;
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #121212;
+            }
+            .container {
+                background-color: #1e1e1e;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            }
+            .settings {
+                background-color: #2d2d2d;
+            }
+            .setting-label, .setting-value {
+                color: #e0e0e0;
+            }
+            .preview-container {
+                border-color: #404040;
+            }
+            .image-info, .preview-wrapper {
+                background-color: #2d2d2d;
+            }
+            .help-title, .faq-title {
+                color: #e0e0e0;
+            }
+            .help-step {
+                background-color: #2d2d2d;
+            }
+            .step-content h3 {
+                color: #e0e0e0;
+            }
+            .step-content p {
+                color: #aaa;
+            }
+            .help-faq {
+                background-color: #2d2d2d;
+            }
+            .faq-item p {
+                color: #aaa;
+            }
+            .help-shortcut {
+                background-color: #1b3d1f;
+            }
+            .help-shortcut h3 {
+                color: #81c784;
+            }
+            .help-shortcut li {
+                color: #bbb;
+            }
+            .footer {
+                color: #666;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PDF转长图</h1>
+        <p class="subtitle">专为iOS/iPadOS优化，文件不离开设备</p>
+        
+        <div class="file-input-container">
+            <input type="file" id="pdfFile" class="file-input" accept=".pdf">
+            <label for="pdfFile" class="file-button">选择PDF文件</label>
+        </div>
+        
+        <div class="settings">
+            <div class="setting-row">
+                <span class="setting-label">输出质量</span>
+                <span class="setting-value">300 DPI（高清）</span>
+            </div>
+            <div class="setting-row">
+                <span class="setting-label">页面限制</span>
+                <span class="setting-value">≤20页（防止内存溢出）</span>
+            </div>
+        </div>
+        
+        <div id="status" class="status info">点击上方按钮选择PDF文件</div>
+        
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <div class="page-count" id="pageCounter">准备中...</div>
+            <div class="progress-bar">
+                <div class="progress" id="progressBar"></div>
+            </div>
+        </div>
+        
+        <div id="previewContainer" class="preview-container">
+            <div class="preview-wrapper">
+                <canvas id="previewCanvas" class="preview-canvas"></canvas>
+            </div>
+            <div class="image-info" id="imageInfo"></div>
+        </div>
+        
+        <button id="downloadButton" class="download-button" disabled>下载长图</button>
+        
+        <div id="saveTip" class="save-tip">
+            💡 下载后可在「文件」App中长按图片 → 分享 → 存储到「照片」
+        </div>
+        
+        <div class="footer">
+            纯前端处理 · 文件不上传 · 隐私安全
+        </div>
+        
+        <div class="help-section">
+            <h2 class="help-title">使用说明</h2>
+            
+            <div class="help-step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>选择PDF文件</h3>
+                    <p>点击蓝色按钮，从「文件」App中选择PDF</p>
+                    <p class="step-tip">也可以直接拖拽PDF文件到页面</p>
+                </div>
+            </div>
+            
+            <div class="help-step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>等待处理</h3>
+                    <p>每页PDF会以300DPI高清渲染，请耐心等待</p>
+                    <p class="step-tip">处理时间取决于PDF页数和复杂度</p>
+                </div>
+            </div>
+            
+            <div class="help-step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>预览效果</h3>
+                    <p>处理完成后可滚动预览长图效果</p>
+                </div>
+            </div>
+            
+            <div class="help-step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3>下载长图</h3>
+                    <p>点击绿色按钮，图片会下载到「文件」App</p>
+                </div>
+            </div>
+            
+            <div class="help-step">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <h3>保存到相册</h3>
+                    <p>打开「文件」App → 找到下载的图片 → 长按 → 分享 → 「存储图像」</p>
+                </div>
+            </div>
+            
+            <div class="help-faq">
+                <h3 class="faq-title">常见问题</h3>
+                
+                <div class="faq-item">
+                    <p class="faq-q">Q: 为什么要用300DPI？</p>
+                    <p class="faq-a">A: 300DPI是印刷级清晰度，放大查看细节也不会模糊。</p>
+                </div>
+                
+                <div class="faq-item">
+                    <p class="faq-q">Q: 有页数限制吗？</p>
+                    <p class="faq-a">A: 最多支持20页，防止手机内存不足。如果PDF超过20页，建议先拆分。</p>
+                </div>
+                
+                <div class="faq-item">
+                    <p class="faq-q">Q: 文件会上传到服务器吗？</p>
+                    <p class="faq-a">A: 不会。所有处理都在你的设备本地完成，文件不会离开你的手机。</p>
+                </div>
+                
+                <div class="faq-item">
+                    <p class="faq-q">Q: 为什么不能直接保存到相册？</p>
+                    <p class="faq-a">A: 这是iOS系统的限制，网页无法直接写入相册，需要通过「文件」App中转。</p>
+                </div>
+                
+                <div class="faq-item">
+                    <p class="faq-q">Q: 长图太大发不出去怎么办？</p>
+                    <p class="faq-a">A: 可以用「微信文件传输助手」发送给自己，或通过AirDrop传到电脑。</p>
+                </div>
+            </div>
+            
+            <div class="help-shortcut">
+                <h3>iPad小技巧</h3>
+                <ul>
+                    <li>点击地址栏 → 分享按钮 → 「添加到主屏幕」，可创建桌面快捷方式</li>
+                    <li>分屏使用时，左边Safari打开此工具，右边「文件」App拖拽PDF更方便</li>
+                    <li>处理大文件时建议连接充电器，避免中途没电</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        // 配置PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        
+        // DOM元素
+        const fileInput = document.getElementById('pdfFile');
+        const statusElement = document.getElementById('status');
+        const loadingElement = document.getElementById('loading');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewCanvas = document.getElementById('previewCanvas');
+        const downloadButton = document.getElementById('downloadButton');
+        const progressBar = document.getElementById('progressBar');
+        const pageCounter = document.getElementById('pageCounter');
+        const imageInfo = document.getElementById('imageInfo');
+        const saveTip = document.getElementById('saveTip');
+        
+        // 常量
+        const TARGET_DPI = 300;
+        const MAX_PAGES = 20;
+        const SCALE = TARGET_DPI / 72; // PDF默认72DPI
+        
+        // 状态变量
+        let pdfDocument = null;
+        let totalPages = 0;
+        let processedPages = 0;
+        let originalFileName = '';
+        let finalCanvas = null;
+        
+        // 文件选择事件
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                showStatus('请选择PDF文件', 'error');
+                return;
+            }
+            
+            // 检查文件大小（限制50MB）
+            if (file.size > 50 * 1024 * 1024) {
+                showStatus('文件过大，请选择小于50MB的PDF', 'error');
+                return;
+            }
+            
+            originalFileName = file.name.replace(/\.pdf$/i, '');
+            showStatus('正在加载PDF...', 'info');
+            loadingElement.classList.add('show');
+            previewContainer.classList.remove('show');
+            downloadButton.disabled = true;
+            saveTip.classList.remove('show');
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                pdfDocument = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                totalPages = pdfDocument.numPages;
+                
+                if (totalPages > MAX_PAGES) {
+                    showStatus(`PDF共${totalPages}页，超过${MAX_PAGES}页限制`, 'error');
+                    loadingElement.classList.remove('show');
+                    return;
+                }
+                
+                showStatus(`已加载 ${totalPages} 页，开始处理...`, 'info');
+                pageCounter.textContent = `0 / ${totalPages} 页`;
+                processedPages = 0;
+                progressBar.style.width = '0%';
+                
+                await processPDF();
+            } catch (error) {
+                showStatus('加载PDF失败，请重试', 'error');
+                loadingElement.classList.remove('show');
+                console.error('PDF加载错误:', error);
+            }
+        });
+        
+        // 处理PDF
+        async function processPDF() {
+            const pageRenderPromises = [];
+            
+            for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+                pageRenderPromises.push(renderPage(pageNum));
+            }
+            
+            const renderedPages = await Promise.all(pageRenderPromises);
+            finalCanvas = stitchImages(renderedPages);
+            
+            // 显示预览
+            previewCanvas.width = finalCanvas.width;
+            previewCanvas.height = finalCanvas.height;
+            previewCanvas.getContext('2d').drawImage(finalCanvas, 0, 0);
+            
+            // 显示图片信息
+            const fileSize = estimateFileSize(finalCanvas.width, finalCanvas.height);
+            imageInfo.textContent = `${finalCanvas.width} × ${finalCanvas.height} 像素 · 约 ${fileSize}`;
+            
+            loadingElement.classList.remove('show');
+            previewContainer.classList.add('show');
+            downloadButton.disabled = false;
+            saveTip.classList.add('show');
+            showStatus('处理完成！点击下方按钮下载', 'success');
+            
+            // 释放内存
+            renderedPages.forEach(canvas => {
+                canvas.width = 0;
+                canvas.height = 0;
+            });
+        }
+        
+        // 渲染单页
+        async function renderPage(pageNum) {
+            const page = await pdfDocument.getPage(pageNum);
+            const viewport = page.getViewport({ scale: SCALE });
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            
+            await page.render({
+                canvasContext: canvas.getContext('2d'),
+                viewport: viewport
+            }).promise;
+            
+            processedPages++;
+            const progress = (processedPages / totalPages) * 100;
+            progressBar.style.width = `${progress}%`;
+            pageCounter.textContent = `${processedPages} / ${totalPages} 页`;
+            
+            return canvas;
+        }
+        
+        // 拼接图片
+        function stitchImages(pages) {
+            let totalHeight = 0;
+            let maxWidth = 0;
+            
+            pages.forEach(page => {
+                totalHeight += page.height;
+                maxWidth = Math.max(maxWidth, page.width);
+            });
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = maxWidth;
+            canvas.height = totalHeight;
+            const ctx = canvas.getContext('2d');
+            
+            // 白色背景
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            let currentY = 0;
+            pages.forEach(page => {
+                ctx.drawImage(page, 0, currentY);
+                currentY += page.height;
+            });
+            
+            return canvas;
+        }
+        
+        // 估算文件大小
+        function estimateFileSize(width, height) {
+            // PNG粗略估算：宽 × 高 × 3 bytes (RGB) × 0.3 (压缩比)
+            const bytes = width * height * 3 * 0.3;
+            if (bytes > 1024 * 1024) {
+                return `~${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+            }
+            return `~${(bytes / 1024).toFixed(0)} KB`;
+        }
+        
+        // 显示状态
+        function showStatus(message, type) {
+            statusElement.textContent = message;
+            statusElement.className = 'status ' + type;
+        }
+        
+        // 下载功能
+        downloadButton.addEventListener('click', () => {
+            if (!finalCanvas) return;
+            
+            downloadButton.textContent = '生成中...';
+            downloadButton.disabled = true;
+            
+            // 使用requestAnimationFrame避免UI冻结
+            requestAnimationFrame(() => {
+                finalCanvas.toBlob((blob) => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${originalFileName}_long.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    downloadButton.textContent = '下载长图';
+                    downloadButton.disabled = false;
+                }, 'image/png');
+            });
+        });
+        
+        // iOS拖拽支持
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+        
+        document.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.toLowerCase().endsWith('.pdf')) {
+                // 模拟文件选择
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                fileInput.files = dataTransfer.files;
+                fileInput.dispatchEvent(new Event('change'));
+            }
+        });
+    </script>
+</body>
+</html>
